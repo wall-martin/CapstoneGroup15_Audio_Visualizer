@@ -1,5 +1,7 @@
 #Project outline
 
+#IDEAS FROM: https://www.youtube.com/watch?v=spUNpyF58BY < 3b1b video on fourier transforms
+
 #code: import packages: numpy, scipy, tinker(?)
 # what if we used pygame or something to visualize
 # looking for an easy-to-implement graphics system
