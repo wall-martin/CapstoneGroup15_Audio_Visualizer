@@ -8,7 +8,7 @@ from scipy.fft import rfft, rfftfreq
 from matplotlib import pyplot as plt
 
 
-audioName = 'sweep.wav'
+audioName = 'test_song.wav'
 # audioName = 'test_song.wav'
 rate, data = wavread(audioName)
 
@@ -16,8 +16,8 @@ pygame.mixer.init()
 pygame.mixer.music.load(audioName)
 pygame.mixer.music.set_volume(0.2)
 
-WIDTH, HEIGHT = 300,300
-FPS = 30
+WIDTH, HEIGHT = 900,900
+FPS = 24
 MP = int(np.floor(WIDTH/2))
 
 length = data.shape[0] / rate
@@ -74,10 +74,11 @@ def dataFormat(data,HEIGHT): #looking to average out the values across the Y axi
 specData = spectro(data,0)
 
 pygame.init()
-screen = pygame.display.set_mode((800,700))
+HEIGHT = specData[0][0].shape[0]
+screen = pygame.display.set_mode((WIDTH+100,HEIGHT+100))
 pygame.display.set_caption('Test')
 clock = pygame.time.Clock()
-specSurface = pygame.Surface((WIDTH,HEIGHT))
+specSurface = pygame.Surface((WIDTH,HEIGHT+50))
 font = pygame.font.Font('freesansbold.ttf', 32)
 
 
@@ -88,6 +89,7 @@ while True:
             exit()
 
     pygame.mixer.music.play()
+    bars = specData[0][0].shape[0]
     for frame in range(T-1):
 #        screen.fill('Black')
 #        text = font.render(f'{frame}', True, 'green')
@@ -95,8 +97,8 @@ while True:
         specSurface.fill('Black')
 #        plt.plot(np.abs(specData[0][frame][:]))
 #        plt.show()
-        for i in range(specData[0][0].shape[0]):
+        for i in range(HEIGHT):
             pygame.draw.line(specSurface, 'RED', (MP - abs(specData[0][frame][i]), HEIGHT - i), (MP + abs(specData[0][frame][i]), HEIGHT - i))
-        screen.blit(specSurface,(200,200))
+        screen.blit(specSurface,(0,0))
         pygame.display.update()
         pygame.time.Clock().tick(FPS)
