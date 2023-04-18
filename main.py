@@ -4,12 +4,20 @@ from sys import exit
 from scipy.io.wavfile import read as wavread
 from scipy.io.wavfile import write as wavwrite
 from scipy.fft import rfft, rfftfreq
+#testing purposes
+from matplotlib import pyplot as plt
+
 
 audioName = 'sweep.wav'
+# audioName = 'test_song.wav'
 rate, data = wavread(audioName)
 
-WIDTH, HEIGHT = 256,256
-FPS = 15
+pygame.mixer.init()
+pygame.mixer.music.load(audioName)
+pygame.mixer.music.set_volume(0.2)
+
+WIDTH, HEIGHT = 300,300
+FPS = 30
 MP = int(np.floor(WIDTH/2))
 
 length = data.shape[0] / rate
@@ -33,16 +41,20 @@ def spectro(data,overlap):
         #the idea is to use a clever function that averages array values over the entire frequency spectrum
         #and display it over HEIGHT pixles, where each pixle is one frequency range.
         #higher frequency ranges ought to be squished into less pixles than lower frequencies.
-        specL.append(dataFormat(_specL,HEIGHT)) #needs to be more robust...
-        specR.append(dataFormat(_specR, HEIGHT))
+#        specL.append(dataFormat(_specL,HEIGHT)) #needs to be more robust...
+#        specR.append(dataFormat(_specR, HEIGHT))
+        specL.append(_specL)
+        specR.append(_specR)
         #should end with two arrays of size T,
         # each containing RATE/2 entries (one for each frequency in sample range)
         #execpt we actually averaged out the RATE/2 frequency domain into HEIGHT many values (hopefully)
 
     #log for specific data values, because lower frequencies produce much smaller amplitude than do higher ones
     #could we try to implement the Mel scale? Probably?
-    _data.append(10 * np.log10(specL))
-    _data.append(10 * np.log10(specR))
+#    _data.append(10 * np.log10(specL))
+#    _data.append(10 * np.log10(specR))
+    _data.append(specL)
+    _data.append(specR)
 
     #now we have data split into L, R channels full of T arrays which themselves contain (RATE/2)/HEIGHT frequency amplitudes
     # if you wanted to know the strength of the 50Hz frequency during the 150th frame of our animation, on the left channel:
@@ -66,19 +78,25 @@ screen = pygame.display.set_mode((800,700))
 pygame.display.set_caption('Test')
 clock = pygame.time.Clock()
 specSurface = pygame.Surface((WIDTH,HEIGHT))
+font = pygame.font.Font('freesansbold.ttf', 32)
+
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
-    screen.blit(specSurface, (25, 0))
 
-    #IDK HOW TO ACTUALLY DO THIS BUT THIS CERTAINLY MAKES _A_ DRAWING :P
-
+    pygame.mixer.music.play()
     for frame in range(T-1):
+#        screen.fill('Black')
+#        text = font.render(f'{frame}', True, 'green')
+#        screen.blit(text, (600,30))
         specSurface.fill('Black')
-        for i in range(HEIGHT):
-            pygame.draw.line(specSurface, 'RED', (MP - abs(specData[0][frame][i]), i), (MP + abs(specData[0][frame][i]), i))
-        clock.tick(FPS)
-    pygame.display.update()
+#        plt.plot(np.abs(specData[0][frame][:]))
+#        plt.show()
+        for i in range(specData[0][0].shape[0]):
+            pygame.draw.line(specSurface, 'RED', (MP - abs(specData[0][frame][i]), HEIGHT - i), (MP + abs(specData[0][frame][i]), HEIGHT - i))
+        screen.blit(specSurface,(200,200))
+        pygame.display.update()
+        pygame.time.Clock().tick(FPS)
