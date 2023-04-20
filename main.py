@@ -3,18 +3,25 @@ import numpy as np
 from sys import exit
 from scipy.io.wavfile import read as wavread
 from scipy.io.wavfile import write as wavwrite
-from scipy.fft import rfft, rfftfreq
-#testing purposes
-from matplotlib import pyplot as plt
+from scipy.fft import rfft
 
+#TODO: show menu.
+# Select which files to load? All Files should be an option.
+# FPS choice : 15, 24, 45, 60
 
-audioName = 'test_song.wav'
-# audioName = 'test_song.wav'
+#TODO: loading screen
+# load all the files, update the window after each point? Make draw a bar on a loading screen at each call of the modify function?
+
+#TODO: play screen
+# select which audio to play
+# change audio with functions
+# export new audio files (lol maybe)
+audioName = 'strings_trem_demo.wav'
 rate, data = wavread(audioName)
 
 pygame.mixer.init()
 pygame.mixer.music.load(audioName)
-pygame.mixer.music.set_volume(0.2)
+pygame.mixer.music.set_volume(1)
 
 WIDTH, HEIGHT = 900,900
 FPS = 24
@@ -25,7 +32,29 @@ T = int(np.floor(length * FPS))
 
 print(f"audio is {length} seconds long, so at {FPS}fps, we will show {T} frames total. Ish.")
 
-#the full audio is length*rate samples. we determine T total frames needed. thee frames will determine our windows.
+def modifyData(data):
+    modified_data = []
+    for entry in range(HEIGHT):
+        total = 0
+        start_index = int(len(data) ** (entry / HEIGHT)) - 1 # this uses log properties without the log
+        stop_index = int(len(data) ** (entry / HEIGHT))
+        for index in range(start_index, stop_index):
+            total += data[index]
+
+        average = total / (stop_index - start_index)
+        modified_data.append(average)
+
+        #AND NOW A CONVOLUTION FOR NO REASON OTHER THAN I REALLY WANTED TO
+        #JK it smoothes out the data to help make peaks look more natural
+        #and helps to define the shapes we hope to see from the audio in the first place
+
+        # Define mask and store as an array
+        w = 5
+        mask = np.ones((1, w)) / w
+        mask = mask[0, :]
+        # Convolve the mask with the raw data
+        convolved_data = np.convolve(modified_data, mask, 'same')
+    return convolved_data
 
 def spectro(data,overlap):
     _data = []
@@ -37,48 +66,27 @@ def spectro(data,overlap):
         # FFT taken over small windows such that each frame is a whole representation of the frequency spectryrm
         _specL = (rfft(data[i:i + window, 0]))
         _specR = (rfft(data[i:i + window, 1]))
+
         #these arrays currently have more values than we can represent by our HEIGHT constraint.
-        #the idea is to use a clever function that averages array values over the entire frequency spectrum
-        #and display it over HEIGHT pixles, where each pixle is one frequency range.
-        #higher frequency ranges ought to be squished into less pixles than lower frequencies.
-#        specL.append(dataFormat(_specL,HEIGHT)) #needs to be more robust...
-#        specR.append(dataFormat(_specR, HEIGHT))
-        specL.append(_specL)
-        specR.append(_specR)
+        _specL = modifyData(_specL)
+        _specL = modifyData(_specR)
+
         #should end with two arrays of size T,
         # each containing RATE/2 entries (one for each frequency in sample range)
         #execpt we actually averaged out the RATE/2 frequency domain into HEIGHT many values (hopefully)
-
-    #log for specific data values, because lower frequencies produce much smaller amplitude than do higher ones
-    #could we try to implement the Mel scale? Probably?
-#    _data.append(10 * np.log10(specL))
-#    _data.append(10 * np.log10(specR))
+        specL.append(_specL)
+        specR.append(_specR)
     _data.append(specL)
     _data.append(specR)
-
-    #now we have data split into L, R channels full of T arrays which themselves contain (RATE/2)/HEIGHT frequency amplitudes
-    # if you wanted to know the strength of the 50Hz frequency during the 150th frame of our animation, on the left channel:
-    #_data[0][150][50*]
-    #*(or what4ever bc our frequencies have been averaged over HEIGHT lol)
-
-    return _data
-
-def dataFormat(data,HEIGHT): #looking to average out the values across the Y axis (frequency values) over our limited HEIGHT
-    # NEEDS HELP LOL
-    gapSize = int((data.shape[0]) / HEIGHT)
-    _data = []
-    for i in range(0, data.shape[0], gapSize):
-        _data.append(abs(np.average(data[i:(i + gapSize)])))
     return _data
 
 specData = spectro(data,0)
 
 pygame.init()
-HEIGHT = specData[0][0].shape[0]
-screen = pygame.display.set_mode((WIDTH+100,HEIGHT+100))
+screen = pygame.display.set_mode((WIDTH,HEIGHT))
 pygame.display.set_caption('Test')
 clock = pygame.time.Clock()
-specSurface = pygame.Surface((WIDTH,HEIGHT+50))
+specSurface = pygame.Surface((WIDTH,HEIGHT))
 font = pygame.font.Font('freesansbold.ttf', 32)
 
 
@@ -89,16 +97,11 @@ while True:
             exit()
 
     pygame.mixer.music.play()
-    bars = specData[0][0].shape[0]
+    bars = len(specData[0][0])
     for frame in range(T-1):
-#        screen.fill('Black')
-#        text = font.render(f'{frame}', True, 'green')
-#        screen.blit(text, (600,30))
         specSurface.fill('Black')
-#        plt.plot(np.abs(specData[0][frame][:]))
-#        plt.show()
-        for i in range(HEIGHT):
+        for i in range(bars):
             pygame.draw.line(specSurface, 'RED', (MP - abs(specData[0][frame][i]), HEIGHT - i), (MP + abs(specData[0][frame][i]), HEIGHT - i))
         screen.blit(specSurface,(0,0))
         pygame.display.update()
-        pygame.time.Clock().tick(FPS)
+        pygame.time.Clock().tick(FPS + FPS*(.2))
